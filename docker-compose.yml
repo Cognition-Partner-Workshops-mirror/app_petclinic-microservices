@@ -1,0 +1,178 @@
+services:
+  # PostgreSQL database shared by all data services
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: resumeai
+      POSTGRES_PASSWORD: resumeai
+      POSTGRES_DB: resumeai
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resumeai"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Spring Cloud Config Server — must start first
+  config-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE_NAME: resume-ai-config-server
+        PORT: 8888
+    container_name: config-server
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - 8888:8888
+
+  # Netflix Eureka discovery server
+  discovery-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE_NAME: resume-ai-discovery-server
+        PORT: 8761
+    container_name: discovery-server
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      config-server:
+        condition: service_healthy
+    ports:
+      - 8761:8761
+
+  # Spring Cloud Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE_NAME: resume-ai-api-gateway
+        PORT: 8080
+    container_name: api-gateway
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    ports:
+      - 8080:8080
+
+  # Resume parsing and job description service
+  resume-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE_NAME: resume-ai-resume-service
+        PORT: 8081
+    container_name: resume-service
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/resumeai
+      - SPRING_DATASOURCE_USERNAME=resumeai
+      - SPRING_DATASOURCE_PASSWORD=resumeai
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - 8081:8081
+
+  # AI-powered interview question generation
+  interview-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE_NAME: resume-ai-interview-service
+        PORT: 8082
+    container_name: interview-service
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/resumeai
+      - SPRING_DATASOURCE_USERNAME=resumeai
+      - SPRING_DATASOURCE_PASSWORD=resumeai
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - 8082:8082
+
+  # AI-powered profile enhancement and gap analysis
+  profile-enhancer-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE_NAME: resume-ai-profile-enhancer-service
+        PORT: 8083
+    container_name: profile-enhancer-service
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/resumeai
+      - SPRING_DATASOURCE_USERNAME=resumeai
+      - SPRING_DATASOURCE_PASSWORD=resumeai
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - 8083:8083
+
+volumes:
+  pgdata:

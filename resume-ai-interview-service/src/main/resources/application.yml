@@ -1,0 +1,35 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: interview-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/resumeai}
+    username: ${SPRING_DATASOURCE_USERNAME:resumeai}
+    password: ${SPRING_DATASOURCE_PASSWORD:resumeai}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  flyway:
+    enabled: true
+  # Groq AI (OpenAI-compatible) via Spring AI
+  ai:
+    openai:
+      api-key: ${GROQ_API_KEY}
+      base-url: https://api.groq.com/openai
+      chat:
+        options:
+          model: llama-3.3-70b-versatile
+          temperature: 0.7
+
+# Docker profile overrides
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+    import: configserver:http://config-server:8888
