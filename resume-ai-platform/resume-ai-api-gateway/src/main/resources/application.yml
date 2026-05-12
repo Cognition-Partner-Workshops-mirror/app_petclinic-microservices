@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
+  cloud:
+    gateway:
+      # Route definitions for downstream microservices using Eureka lb:// URIs
+      routes:
+        - id: resume-service
+          uri: lb://resume-service
+          predicates:
+            - Path=/api/resumes/**,/api/jd/**
+        - id: interview-service
+          uri: lb://interview-service
+          predicates:
+            - Path=/api/interviews/**
+        - id: profile-enhancer-service
+          uri: lb://profile-enhancer-service
+          predicates:
+            - Path=/api/enhance/**
+
+server:
+  port: 8080
+
+# Docker profile overrides config import to use container hostname
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+    import: configserver:http://config-server:8888
