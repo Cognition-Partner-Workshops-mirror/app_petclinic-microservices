@@ -1,0 +1,14 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: discovery-server
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
+
+# Standalone Eureka server — does not register with itself
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false

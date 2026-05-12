@@ -1,0 +1,21 @@
+# Configuration for interview-service
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/resumeai}
+    username: ${SPRING_DATASOURCE_USERNAME:resumeai}
+    password: ${SPRING_DATASOURCE_PASSWORD:resumeai}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  flyway:
+    enabled: true
+  # Spring AI configuration for Groq (OpenAI-compatible)
+  ai:
+    openai:
+      api-key: ${GROQ_API_KEY}
+      base-url: https://api.groq.com/openai
+      chat:
+        options:
+          model: llama-3.3-70b-versatile
+          temperature: 0.7
